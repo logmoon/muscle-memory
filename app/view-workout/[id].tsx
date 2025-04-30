@@ -1,21 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useState, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Workout } from '../types';
 import { getWorkouts, deleteWorkout } from '../utils/storage';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { COLORS } from '../constants/theme';
 import ThemedAlert from '../components/ThemedAlert';
 
 export default function WorkoutDetails() {
   const { id } = useLocalSearchParams();
   const [workout, setWorkout] = useState<Workout | null>(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [showDeleteWorkoutAlert, setShowDeleteWorkoutAlert] = useState(false);
 
-  useEffect(() => {
-    loadWorkout();
-  }, [id]);
+  useFocusEffect(
+    useCallback(() => {
+      loadWorkout();
+    }, [id])
+  );
 
   const loadWorkout = async () => {
     const workouts = await getWorkouts();
@@ -43,13 +43,6 @@ export default function WorkoutDetails() {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const handleDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === 'ios');
-    if (selectedDate && workout) {
-      setWorkout({ ...workout, date: selectedDate.toISOString() });
-    }
-  };
-
   if (!workout) {
     return (
       <View style={styles.container}>
@@ -63,17 +56,9 @@ export default function WorkoutDetails() {
       <View style={styles.header}>
         <View style={styles.titleContainer}>
           <Text style={styles.title}>{workout.name}</Text>
-          <TouchableOpacity onPress={() => setShowDatePicker(true)}>
+          <TouchableOpacity>
             <Text style={styles.date}>{formatDate(workout.date)}</Text>
           </TouchableOpacity>
-          {showDatePicker && (
-            <DateTimePicker
-              value={new Date(workout.date)}
-              mode="date"
-              onChange={handleDateChange}
-              themeVariant="dark"
-            />
-          )}
         </View>
         <View style={styles.buttonContainer}>
           <TouchableOpacity

@@ -5,6 +5,7 @@ import { Workout } from './types';
 import { getWorkouts } from './utils/storage';
 import { COLORS } from './constants/theme';
 
+
 export default function Home() {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [refreshing, setRefreshing] = useState(false);

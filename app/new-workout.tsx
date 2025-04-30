@@ -6,12 +6,15 @@ import { saveWorkout } from './utils/storage';
 import { pickImage, takePhoto } from './utils/imagePicker';
 import { COLORS } from './constants/theme';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import ThemedAlert from './components/ThemedAlert';
 
 export default function NewWorkout() {
   const [workoutName, setWorkoutName] = useState('');
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [workoutDate, setWorkoutDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showDeleteExerciseAlert, setShowDeleteExerciseAlert] = useState(false);
+  const [exerciseToDelete, setExerciseToDelete] = useState<string | null>(null);
 
   const addExercise = () => {
     const newExercise: Exercise = {
@@ -69,8 +72,17 @@ export default function NewWorkout() {
     }
   };
 
-  const deleteExercise = (exerciseId: string) => {
-    setExercises(exercises.filter(ex => ex.id !== exerciseId));
+  const confirmDeleteExercise = (exerciseId: string) => {
+    setExerciseToDelete(exerciseId);
+    setShowDeleteExerciseAlert(true);
+  };
+
+  const handleDeleteExercise = () => {
+    if (exerciseToDelete) {
+      setExercises(exercises.filter(ex => ex.id !== exerciseToDelete));
+    }
+    setShowDeleteExerciseAlert(false);
+    setExerciseToDelete(null);
   };
 
   const deleteSet = (set: { weight: number; reps: number }) => {
@@ -161,7 +173,7 @@ export default function NewWorkout() {
             />
             <TouchableOpacity
               style={styles.deleteButton}
-              onPress={() => deleteExercise(exercise.id)}
+              onPress={() => confirmDeleteExercise(exercise.id)}
             >
               <Text style={styles.deleteButtonText}>×</Text>
             </TouchableOpacity>
@@ -239,6 +251,16 @@ export default function NewWorkout() {
       >
         <Text style={styles.buttonText}>Save Workout</Text>
       </TouchableOpacity>
+      <ThemedAlert
+        visible={showDeleteExerciseAlert}
+        title="Delete Exercise"
+        message="Are you sure you want to delete this exercise?"
+        onConfirm={handleDeleteExercise}
+        onCancel={() => {
+          setShowDeleteExerciseAlert(false);
+          setExerciseToDelete(null);
+        }}
+      />
     </ScrollView>
   );
 }

@@ -42,7 +42,7 @@ export default function RootLayout() {
           }} 
         />
         <Stack.Screen 
-          name="workout/[id]" 
+          name="view-workout/[id]" 
           options={{ 
             title: 'Workout Details',
             headerShown: true,

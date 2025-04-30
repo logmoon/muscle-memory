@@ -42,7 +42,7 @@ export default function Home() {
         data={workouts}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <Link href={`/workout/${item.id}` as `/workout/${string}`} asChild>
+          <Link href={`/view-workout/${item.id}` as `/view-workout/${string}`} asChild>
             <TouchableOpacity style={styles.workoutItem}>
               <Text style={styles.workoutName}>{item.name}</Text>
               <Text style={styles.workoutDate}>{formatDate(item.date)}</Text>

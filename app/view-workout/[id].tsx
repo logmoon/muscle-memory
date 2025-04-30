@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Workout } from '../types';
-import { getWorkouts, deleteWorkout, deleteExercise, deleteSet } from '../utils/storage';
+import { getWorkouts, deleteWorkout } from '../utils/storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { COLORS } from '../constants/theme';
 import ThemedAlert from '../components/ThemedAlert';
@@ -12,8 +12,6 @@ export default function WorkoutDetails() {
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showDeleteWorkoutAlert, setShowDeleteWorkoutAlert] = useState(false);
-  const [showDeleteExerciseAlert, setShowDeleteExerciseAlert] = useState(false);
-  const [exerciseToDelete, setExerciseToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     loadWorkout();

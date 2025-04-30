@@ -1,16 +1,19 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image, TextInput, Platform } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Workout } from '../types';
-import { getWorkouts, deleteWorkout, deleteExercise, updateWorkout, deleteSet } from '../utils/storage';
+import { getWorkouts, deleteWorkout, deleteExercise, deleteSet } from '../utils/storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { COLORS } from '../constants/theme';
+import ThemedAlert from '../components/ThemedAlert';
 
 export default function WorkoutDetails() {
   const { id } = useLocalSearchParams();
   const [workout, setWorkout] = useState<Workout | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showDeleteWorkoutAlert, setShowDeleteWorkoutAlert] = useState(false);
+  const [showDeleteExerciseAlert, setShowDeleteExerciseAlert] = useState(false);
+  const [exerciseToDelete, setExerciseToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     loadWorkout();
@@ -22,6 +25,10 @@ export default function WorkoutDetails() {
     setWorkout(found || null);
   };
 
+  const confirmDeleteWorkout = () => {
+    setShowDeleteWorkoutAlert(true);
+  };
+
   const handleDeleteWorkout = async () => {
     if (!workout) return;
     
@@ -31,66 +38,11 @@ export default function WorkoutDetails() {
     } else {
       alert('Failed to delete workout');
     }
+    setShowDeleteWorkoutAlert(false);
   };
-
-  const handleDeleteExercise = async (exerciseId: string) => {
-    if (!workout) return;
-
-    const success = await deleteExercise(workout.id, exerciseId);
-    if (success) {
-      loadWorkout();
-    } else {
-      alert('Failed to delete exercise');
-    }
-  };
-
-  const handleDeleteSet = async (exercicdeId: string, setId: number) => {
-    if (!workout) return;
-    const success = await deleteSet(workout.id, exercicdeId, setId);
-    if (success) {
-      loadWorkout();
-    } else {
-      alert('Failed to delete exercise');
-    }
-  }
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
-  };
-
-  const handleUpdateWorkout = async () => {
-    if (!workout) return;
-    const success = await updateWorkout(workout);
-    if (success) {
-      setIsEditing(false);
-    } else {
-      alert('Failed to update workout');
-    }
-  };
-
-  const updateExerciseName = (exerciseId: string, name: string) => {
-    if (!workout) return;
-    const updatedExercises = workout.exercises.map(ex =>
-      ex.id === exerciseId ? { ...ex, name } : ex
-    );
-    setWorkout({ ...workout, exercises: updatedExercises });
-  };
-
-  const updateSet = (exerciseId: string, setIndex: number, field: 'weight' | 'reps', value: string) => {
-    if (!workout) return;
-    const updatedExercises = workout.exercises.map(ex =>
-      ex.id === exerciseId
-        ? {
-            ...ex,
-            sets: ex.sets.map((set, idx) =>
-              idx === setIndex
-                ? { ...set, [field]: Number(value) || 0 }
-                : set
-            ),
-          }
-        : ex
-    );
-    setWorkout({ ...workout, exercises: updatedExercises });
   };
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
@@ -112,15 +64,7 @@ export default function WorkoutDetails() {
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 30 }}>
       <View style={styles.header}>
         <View style={styles.titleContainer}>
-          {isEditing ? (
-            <TextInput
-              style={styles.titleInput}
-              value={workout.name}
-              onChangeText={(name) => setWorkout({ ...workout, name })}
-            />
-          ) : (
-            <Text style={styles.title}>{workout.name}</Text>
-          )}
+          <Text style={styles.title}>{workout.name}</Text>
           <TouchableOpacity onPress={() => setShowDatePicker(true)}>
             <Text style={styles.date}>{formatDate(workout.date)}</Text>
           </TouchableOpacity>
@@ -135,16 +79,14 @@ export default function WorkoutDetails() {
         </View>
         <View style={styles.buttonContainer}>
           <TouchableOpacity
-            style={[styles.button, isEditing ? styles.saveButton : styles.editButton]}
-            onPress={isEditing ? handleUpdateWorkout : () => setIsEditing(true)}
+            style={[styles.button, styles.editButton]}
+            onPress={() => router.push(`/edit-workout/${workout.id}`)}
           >
-            <Text style={styles.buttonText}>
-              {isEditing ? 'Save' : 'Edit'}
-            </Text>
+            <Text style={styles.buttonText}>Edit</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.button, styles.deleteButton]}
-            onPress={handleDeleteWorkout}
+            onPress={confirmDeleteWorkout}
           >
             <Text style={styles.buttonText}>Delete</Text>
           </TouchableOpacity>
@@ -155,25 +97,9 @@ export default function WorkoutDetails() {
       {workout.exercises.map((exercise, index) => (
         <View key={exercise.id} style={styles.exerciseContainer}>
           <View style={styles.exerciseHeader}>
-            {isEditing ? (
-              <View style={styles.exerciseHeader}>
-              <TextInput
-                style={styles.exerciseNameInput}
-                value={exercise.name}
-                onChangeText={(name) => updateExerciseName(exercise.id, name)}
-              />
-              <TouchableOpacity
-                style={styles.deleteExerciseButton}
-                onPress={() => handleDeleteExercise(exercise.id)}
-              >
-                <Text style={styles.deleteButtonText}>×</Text>
-              </TouchableOpacity>
-              </View>
-            ) : (
-              <Text style={styles.exerciseName}>
-                {index + 1}. {exercise.name}
-              </Text>
-            )}
+            <Text style={styles.exerciseName}>
+              {index + 1}. {exercise.name}
+            </Text>
           </View>
 
           {exercise.imageUri && (
@@ -185,38 +111,20 @@ export default function WorkoutDetails() {
 
           {exercise.sets.map((set, setIndex) => (
             <View key={setIndex} style={styles.setContainer}>
-              {isEditing ? (
-                <View style={styles.setInputContainer}>
-                  <TextInput
-                    style={styles.setInput}
-                    value={set.weight.toString()}
-                    onChangeText={(value) => updateSet(exercise.id, setIndex, 'weight', value)}
-                    keyboardType="numeric"
-                  />
-                  <Text style={styles.setText}>kg ×</Text>
-                  <TextInput
-                    style={styles.setInput}
-                    value={set.reps.toString()}
-                    onChangeText={(value) => updateSet(exercise.id, setIndex, 'reps', value)}
-                    keyboardType="numeric"
-                  />
-                  <Text style={styles.setText}>reps</Text>
-                  <TouchableOpacity
-                    style={styles.deleteExerciseButton}
-                    onPress={() => handleDeleteSet(exercise.id, setIndex)}
-                  >
-                    <Text style={styles.deleteButtonText}>×</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <Text style={styles.setText}>
-                  Set {setIndex + 1}: {set.weight}kg × {set.reps} reps
-                </Text>
-              )}
+              <Text style={styles.setText}>
+                Set {setIndex + 1}: {set.weight}kg × {set.reps} reps
+              </Text>
             </View>
           ))}
         </View>
       ))}
+      <ThemedAlert
+        visible={showDeleteWorkoutAlert}
+        title="Delete Workout"
+        message="Are you sure you want to delete this workout?"
+        onConfirm={handleDeleteWorkout}
+        onCancel={() => setShowDeleteWorkoutAlert(false)}
+      />
     </ScrollView>
   );
 }

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image, TextInput } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image, TextInput, Platform } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Workout } from '../types';
-import { getWorkouts, deleteWorkout, deleteExercise, updateWorkout } from '../utils/storage';
+import { getWorkouts, deleteWorkout, deleteExercise, updateWorkout, deleteSet } from '../utils/storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { COLORS } from '../constants/theme';
 
 export default function WorkoutDetails() {
   const { id } = useLocalSearchParams();
@@ -26,7 +27,7 @@ export default function WorkoutDetails() {
     
     const success = await deleteWorkout(workout.id);
     if (success) {
-      router.replace('/');
+      router.dismissAll();
     } else {
       alert('Failed to delete workout');
     }
@@ -42,6 +43,16 @@ export default function WorkoutDetails() {
       alert('Failed to delete exercise');
     }
   };
+
+  const handleDeleteSet = async (exercicdeId: string, setId: number) => {
+    if (!workout) return;
+    const success = await deleteSet(workout.id, exercicdeId, setId);
+    if (success) {
+      loadWorkout();
+    } else {
+      alert('Failed to delete exercise');
+    }
+  }
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
@@ -83,7 +94,7 @@ export default function WorkoutDetails() {
   };
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(false);
+    setShowDatePicker(Platform.OS === 'ios');
     if (selectedDate && workout) {
       setWorkout({ ...workout, date: selectedDate.toISOString() });
     }
@@ -98,7 +109,7 @@ export default function WorkoutDetails() {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 30 }}>
       <View style={styles.header}>
         <View style={styles.titleContainer}>
           {isEditing ? (
@@ -118,6 +129,7 @@ export default function WorkoutDetails() {
               value={new Date(workout.date)}
               mode="date"
               onChange={handleDateChange}
+              themeVariant="dark"
             />
           )}
         </View>
@@ -144,22 +156,24 @@ export default function WorkoutDetails() {
         <View key={exercise.id} style={styles.exerciseContainer}>
           <View style={styles.exerciseHeader}>
             {isEditing ? (
+              <View style={styles.exerciseHeader}>
               <TextInput
                 style={styles.exerciseNameInput}
                 value={exercise.name}
                 onChangeText={(name) => updateExerciseName(exercise.id, name)}
               />
+              <TouchableOpacity
+                style={styles.deleteExerciseButton}
+                onPress={() => handleDeleteExercise(exercise.id)}
+              >
+                <Text style={styles.deleteButtonText}>×</Text>
+              </TouchableOpacity>
+              </View>
             ) : (
               <Text style={styles.exerciseName}>
                 {index + 1}. {exercise.name}
               </Text>
             )}
-            <TouchableOpacity
-              style={styles.deleteExerciseButton}
-              onPress={() => handleDeleteExercise(exercise.id)}
-            >
-              <Text style={styles.deleteButtonText}>×</Text>
-            </TouchableOpacity>
           </View>
 
           {exercise.imageUri && (
@@ -187,6 +201,12 @@ export default function WorkoutDetails() {
                     keyboardType="numeric"
                   />
                   <Text style={styles.setText}>reps</Text>
+                  <TouchableOpacity
+                    style={styles.deleteExerciseButton}
+                    onPress={() => handleDeleteSet(exercise.id, setIndex)}
+                  >
+                    <Text style={styles.deleteButtonText}>×</Text>
+                  </TouchableOpacity>
                 </View>
               ) : (
                 <Text style={styles.setText}>
@@ -210,16 +230,22 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 10,
     padding: 5,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: COLORS.input,
     borderRadius: 5,
+    color: COLORS.text,
+    borderWidth: 1,
+    borderColor: COLORS.inputBorder,
   },
   exerciseNameInput: {
     fontSize: 18,
     fontWeight: 'bold',
     flex: 1,
     padding: 5,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: COLORS.input,
     borderRadius: 5,
+    color: COLORS.text,
+    borderWidth: 1,
+    borderColor: COLORS.inputBorder,
   },
   setInputContainer: {
     flexDirection: 'row',
@@ -229,9 +255,12 @@ const styles = StyleSheet.create({
   setInput: {
     width: 50,
     padding: 5,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: COLORS.input,
     borderRadius: 5,
     marginHorizontal: 5,
+    color: COLORS.text,
+    borderWidth: 1,
+    borderColor: COLORS.inputBorder,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -242,22 +271,22 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   editButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: COLORS.editButton,
   },
   saveButton: {
-    backgroundColor: '#4CD964',
+    backgroundColor: COLORS.saveButton,
   },
   deleteButton: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: COLORS.deleteButton,
   },
   buttonText: {
-    color: '#fff',
+    color: COLORS.buttonText,
     fontWeight: 'bold',
   },
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.background,
   },
   header: {
     flexDirection: 'row',
@@ -269,13 +298,14 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 10,
+    color: COLORS.text,
   },
   date: {
     fontSize: 16,
-    color: '#666',
+    color: COLORS.secondaryText,
   },
   deleteWorkoutButton: {
-    backgroundColor: '#ff4444',
+    backgroundColor: COLORS.deleteButton,
     padding: 10,
     borderRadius: 5,
   },
@@ -284,12 +314,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 20,
     marginBottom: 15,
+    color: COLORS.text,
   },
   exerciseContainer: {
-    backgroundColor: '#f8f8f8',
+    backgroundColor: COLORS.card,
     padding: 15,
     borderRadius: 10,
     marginBottom: 15,
+    borderWidth: 1,
+    borderColor: COLORS.exerciseCardBorder,
   },
   exerciseHeader: {
     flexDirection: 'row',
@@ -301,18 +334,19 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     flex: 1,
+    color: COLORS.text,
   },
   deleteExerciseButton: {
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: '#ff4444',
+    backgroundColor: COLORS.deleteButton,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 10,
   },
   deleteButtonText: {
-    color: '#fff',
+    color: COLORS.buttonText,
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -327,6 +361,6 @@ const styles = StyleSheet.create({
   },
   setText: {
     fontSize: 16,
-    color: '#333',
+    color: COLORS.text,
   },
 });

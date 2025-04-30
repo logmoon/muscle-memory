@@ -56,6 +56,29 @@ export const deleteExercise = async (workoutId: string, exerciseId: string) => {
   }
 };
 
+export const deleteSet = async (workoutId: string, exerciseId: string, setIndex: number) => {
+  try {
+    const existingWorkouts = await getWorkouts();
+    const workoutIndex = existingWorkouts.findIndex(w => w.id === workoutId);
+
+    if (workoutIndex === -1) return false;
+
+    const workout = existingWorkouts[workoutIndex];
+    const exerciseIndex = workout.exercises.findIndex(e => e.id === exerciseId);
+
+    if (exerciseIndex === -1) return false;
+
+    workout.exercises[exerciseIndex].sets.splice(setIndex, 1);
+    existingWorkouts[workoutIndex] = workout;
+
+    await AsyncStorage.setItem(WORKOUTS_KEY, JSON.stringify(existingWorkouts));
+    return true;
+  } catch (error) {
+    console.error('Error deleting set:', error);
+    return false;
+  }
+};
+
 export const updateWorkout = async (workout: Workout) => {
   try {
     const existingWorkouts = await getWorkouts();
@@ -77,6 +100,7 @@ const storage = {
   getWorkouts,
   deleteWorkout,
   deleteExercise,
+  deleteSet,
   updateWorkout,
 };
 

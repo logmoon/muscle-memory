@@ -1,20 +1,31 @@
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
-import { useEffect, useState } from 'react';
-import { Link } from 'expo-router';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
+import { useEffect, useState, useCallback } from 'react';
+import { Link, useFocusEffect } from 'expo-router';
 import { Workout } from './types';
 import { getWorkouts } from './utils/storage';
+import { COLORS } from './constants/theme';
 
 export default function Home() {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    loadWorkouts();
-  }, []);
+  // Load workouts when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadWorkouts();
+    }, [])
+  );
 
   const loadWorkouts = async () => {
     const savedWorkouts = await getWorkouts();
     setWorkouts(savedWorkouts);
+    setRefreshing(false);
   };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadWorkouts();
+  }, []);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
@@ -22,7 +33,6 @@ export default function Home() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>My Workouts</Text>
       <Link href="/new-workout" asChild>
         <TouchableOpacity style={styles.addButton}>
           <Text style={styles.addButtonText}>Create New Workout</Text>
@@ -43,6 +53,14 @@ export default function Home() {
           </Link>
         )}
         style={styles.list}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
+          />
+        }
       />
     </View>
   );
@@ -52,21 +70,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#fff',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
+    backgroundColor: COLORS.background,
   },
   addButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: COLORS.button,
     padding: 15,
     borderRadius: 10,
     marginBottom: 20,
   },
   addButtonText: {
-    color: '#fff',
+    color: COLORS.buttonText,
     textAlign: 'center',
     fontSize: 16,
     fontWeight: 'bold',
@@ -75,21 +88,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   workoutItem: {
-    backgroundColor: '#f8f8f8',
+    backgroundColor: COLORS.card,
     padding: 15,
     borderRadius: 10,
     marginBottom: 10,
+    borderWidth: 1,
+    borderColor: COLORS.exerciseCardBorder,
   },
   workoutName: {
     fontSize: 18,
     fontWeight: 'bold',
+    color: COLORS.text,
   },
   workoutDate: {
-    color: '#666',
+    color: COLORS.secondaryText,
     marginTop: 5,
   },
   exerciseCount: {
-    color: '#666',
+    color: COLORS.secondaryText,
     marginTop: 5,
   },
 });

@@ -1,13 +1,17 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Image, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { Exercise, Workout } from './types';
 import { saveWorkout } from './utils/storage';
 import { pickImage, takePhoto } from './utils/imagePicker';
+import { COLORS } from './constants/theme';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function NewWorkout() {
   const [workoutName, setWorkoutName] = useState('');
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [workoutDate, setWorkoutDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const addExercise = () => {
     const newExercise: Exercise = {
@@ -69,6 +73,21 @@ export default function NewWorkout() {
     setExercises(exercises.filter(ex => ex.id !== exerciseId));
   };
 
+  const deleteSet = (set: { weight: number; reps: number }) => {
+    const updatedExercises = exercises.map(ex => ({
+      ...ex,
+      sets: ex.sets.filter(s => s !== set),
+    }));
+    setExercises(updatedExercises);
+  };
+
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setWorkoutDate(selectedDate);
+    }
+  };
+
   const saveNewWorkout = async () => {
     if (!workoutName.trim()) {
       alert('Please enter a workout name');
@@ -83,7 +102,7 @@ export default function NewWorkout() {
     const workout: Workout = {
       id: Date.now().toString(),
       name: workoutName.trim(),
-      date: new Date().toISOString(),
+      date: workoutDate.toISOString(),
       exercises: exercises.map(ex => ({
         ...ex,
         name: ex.name.trim() || 'Unnamed Exercise',
@@ -92,7 +111,7 @@ export default function NewWorkout() {
 
     const success = await saveWorkout(workout);
     if (success) {
-      router.replace('/');
+      router.dismissAll();
     } else {
       alert('Failed to save workout');
     }
@@ -106,7 +125,28 @@ export default function NewWorkout() {
         value={workoutName}
         onChangeText={setWorkoutName}
         placeholder="Enter workout name"
+        placeholderTextColor={COLORS.secondaryText}
       />
+      
+      <Text style={styles.label}>Workout Date</Text>
+      <TouchableOpacity 
+        style={styles.dateButton} 
+        onPress={() => setShowDatePicker(true)}
+      >
+        <Text style={styles.dateButtonText}>
+          {workoutDate.toLocaleDateString()}
+        </Text>
+      </TouchableOpacity>
+      
+      {showDatePicker && (
+        <DateTimePicker
+          value={workoutDate}
+          mode="date"
+          display="default"
+          onChange={onDateChange}
+          themeVariant="dark"
+        />
+      )}
 
       <Text style={styles.sectionTitle}>Exercises</Text>
       {exercises.map((exercise, index) => (
@@ -117,6 +157,7 @@ export default function NewWorkout() {
               value={exercise.name}
               onChangeText={(name) => updateExerciseName(exercise.id, name)}
               placeholder={`Exercise ${index + 1} name`}
+              placeholderTextColor={COLORS.secondaryText}
             />
             <TouchableOpacity
               style={styles.deleteButton}
@@ -159,6 +200,7 @@ export default function NewWorkout() {
                   placeholder="Weight (kg)"
                   keyboardType="numeric"
                 />
+                <Text style={styles.setText}>X</Text>
                 <TextInput
                   style={[styles.input, styles.setInput]}
                   value={set.reps.toString()}
@@ -166,6 +208,12 @@ export default function NewWorkout() {
                   placeholder="Reps"
                   keyboardType="numeric"
                 />
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => deleteSet(exercise.sets[setIndex])}
+                >
+                  <Text style={styles.deleteButtonText}>×</Text>
+                </TouchableOpacity>
               </View>
             </View>
           ))}
@@ -199,30 +247,47 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.background,
   },
   label: {
     fontSize: 16,
     marginBottom: 5,
+    color: COLORS.text,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: COLORS.inputBorder,
     borderRadius: 5,
     padding: 10,
     marginBottom: 10,
+    backgroundColor: COLORS.input,
+    color: COLORS.inputText,
+  },
+  dateButton: {
+    backgroundColor: COLORS.input,
+    borderWidth: 1,
+    borderColor: COLORS.inputBorder,
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 20,
+  },
+  dateButtonText: {
+    color: COLORS.text,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     marginTop: 20,
     marginBottom: 15,
+    color: COLORS.text,
   },
   exerciseContainer: {
-    backgroundColor: '#f8f8f8',
+    backgroundColor: COLORS.card,
     padding: 15,
     borderRadius: 10,
     marginBottom: 15,
+    borderWidth: 1,
+    borderColor: COLORS.exerciseCardBorder,
   },
   exerciseHeader: {
     flexDirection: 'row',
@@ -238,7 +303,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: '#ff4444',
+    backgroundColor: COLORS.deleteButton,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -254,7 +319,7 @@ const styles = StyleSheet.create({
   },
   imageButton: {
     flex: 1,
-    backgroundColor: '#4CAF50',
+    backgroundColor: COLORS.button,
     padding: 10,
     borderRadius: 5,
     marginHorizontal: 5,
@@ -270,10 +335,12 @@ const styles = StyleSheet.create({
   },
   setText: {
     fontSize: 16,
-    marginBottom: 5,
+    marginBottom: 10,
+    color: COLORS.text,
   },
   setInputContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
   },
   setInput: {
@@ -281,7 +348,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 5,
   },
   addButton: {
-    backgroundColor: '#2196F3',
+    backgroundColor: COLORS.button,
     padding: 10,
     borderRadius: 5,
     alignItems: 'center',
@@ -292,11 +359,11 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   saveButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: COLORS.saveButton,
     marginBottom: 30,
   },
   buttonText: {
-    color: '#fff',
+    color: COLORS.buttonText,
     fontSize: 16,
     fontWeight: 'bold',
   },

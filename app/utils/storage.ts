@@ -18,7 +18,15 @@ export const saveWorkout = async (workout: Workout) => {
 export const getWorkouts = async (): Promise<Workout[]> => {
   try {
     const workouts = await AsyncStorage.getItem(WORKOUTS_KEY);
-    return workouts ? JSON.parse(workouts) : [];
+    const parsedWorkouts = workouts ? JSON.parse(workouts) : [];
+    
+    // Sort the workouts by date
+    return parsedWorkouts.sort((a : Workout, b : Workout) => {
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      return dateB - dateA;
+    });
+
   } catch (error) {
     console.error('Error getting workouts:', error);
     return [];
